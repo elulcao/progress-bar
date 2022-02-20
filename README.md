@@ -8,7 +8,7 @@
 <p
     align="center">
     <img
-        src="./assets/demo-01.gif"
+        src="./.assets/demo-01.gif"
         alt="Demo 01"
         width="600"
         height="400"
