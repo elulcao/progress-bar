@@ -19,7 +19,11 @@
 
 Another simple progress bar, but with a package installer flavor. The progress bar displays the
 progress like the well known package manager. This version adapts well to the windows size, small
-or big window size the progress bar will adapt to the change.
+or big window size the progress bar will adapt to the change; the progress bar will adapt to the
+window size automatically.
+
+Last line of the window is preserved to show the progress, the rest of the window is used to show
+the program output that consumes the `progress-bar`.
 
 Characters used by default are "#" and "." but can be changed by updating variables:
 
@@ -43,3 +47,10 @@ be updated by another routine in your code.
   fmt.Println(count) // Update here to your needs
  }
 ```
+
+## Notes
+
+The `progress-bar` has to handler, `syscall.SIGWINCH` and `syscall.SIGTERM`, the first one is used
+to detect the window size change and the second one is used to detect the program termination.
+These handlers can be removed if not needed, your driver code should be able to handle the
+interruptions.
