@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+*_bar.linux
+*_bar.darwin
 
 # Test binary, built with `go test -c`
 *.test
@@ -13,3 +15,13 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# MacOS
+**.DS_Store
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
