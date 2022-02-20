@@ -1,7 +1,7 @@
 # progress-bar
 
-[![Go CI](https://github.com/elulcao/progress-bar/actions/workflows/go.yaml/badge.svg)](https://github.com/elulcao/progress-bar/actions/workflows/go.yaml)
-[![CodeQl CI](https://github.com/elulcao/progress-bar/actions/workflows/codeql-analysis.yaml/badge.svg)](https://github.com/elulcao/progress-bar/actions/workflows/codeql-analysis.yaml)
+[![Go CI](https://github.com/elulcao/progress-bar/actions/workflows/go.yaml/badge.svg)](https://github.com/elulcao/progress-bar/blob/main/.github/workflows/go.yaml)
+[![CodeQl CI](https://github.com/elulcao/progress-bar/actions/workflows/codeql-analysis.yaml/badge.svg)](https://github.com/elulcao/progress-bar/blob/main/.github/workflows/codeql-analysis.yaml)
 
 ---
 
