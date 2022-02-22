@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,13 +13,13 @@ import (
 )
 
 var (
-	header     = len("Progress: [100%] []")
-	total      = 100
-	count      = 0
-	wscol      = 0
-	wsrow      = 0
-	doneStr    = "#"
-	ongoingStr = "."
+	total      = 100 // Total number of iterations to sum 100%
+	header     = 0   // Header length, to be used to calculate the bar width "Progress: [100%] []"
+	count      = 0   // Current iteration
+	wscol      = 0   // Window width
+	wsrow      = 0   // Window height
+	doneStr    = "#" // Progress bar done string
+	ongoingStr = "." // Progress bar ongoing string
 )
 
 // init do the task we want to do before doing all other things
@@ -49,6 +50,15 @@ func updateWSize() error {
 	wscol = int(ws.Col)
 	wsrow = int(ws.Row)
 
+	switch {
+	case wscol >= 0 && wscol <= 9:
+		header = 6 // len("[100%]")
+	case wscol >= 10 && wscol <= 20:
+		header = 9 // len("[100%] []")
+	default:
+		header = 19 // len("Progress: [100%] []")
+	}
+
 	fmt.Print("\x1BD")                // Return carriage
 	fmt.Print("\x1B7")                // Save the cursor position
 	fmt.Printf("\x1B[0;%dr", wsrow-1) // Reserve the bottom line
@@ -68,12 +78,22 @@ func renderPBar() {
 	fmt.Print("\x1B[?47l")   // Restore screen
 	defer fmt.Print("\x1B8") // Restore the cursor position
 
-	barWidth := wscol - header
-	barDone := int(float64(barWidth) * float64(count) / float64(total))
+	barWidth := int(math.Abs(float64(wscol - header)))                  // Calculate the bar width
+	barDone := int(float64(barWidth) * float64(count) / float64(total)) // Calculate the bar done length
+	done := strings.Repeat(doneStr, barDone)                            // Fill the bar with done string
+	todo := strings.Repeat(ongoingStr, barWidth-barDone)                // Fill the bar with todo string
+	bar := fmt.Sprintf("[%s%s]", done, todo)                            // Combine the done and todo string
 
 	fmt.Printf("\x1B[%d;%dH", wsrow, 0) // move cursor to row #, col #
-	fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] ", count*100/total)
-	fmt.Printf("[%s%s]", strings.Repeat(doneStr, barDone), strings.Repeat(ongoingStr, barWidth-barDone))
+
+	switch {
+	case wscol >= 0 && wscol <= 9:
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", count*100/total)
+	case wscol >= 10 && wscol <= 20:
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", count*100/total, bar)
+	default:
+		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", count*100/total, bar)
+	}
 }
 
 // main do the task we want to do
