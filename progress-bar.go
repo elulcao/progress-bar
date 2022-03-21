@@ -107,7 +107,10 @@ func main() {
 				return
 			}
 
-			_ = updateWSize()
+			err := updateWSize()
+			if err != nil {
+				panic(err) // The window size could not be updated
+			}
 		}
 	}()
 
