@@ -15,7 +15,6 @@ import (
 var (
 	total      = 100 // Total number of iterations to sum 100%
 	header     = 0   // Header length, to be used to calculate the bar width "Progress: [100%] []"
-	count      = 0   // Current iteration
 	wscol      = 0   // Window width
 	wsrow      = 0   // Window height
 	doneStr    = "#" // Progress bar done string
@@ -69,7 +68,7 @@ func updateWSize() error {
 }
 
 // renderPBar render the progress bar
-func renderPBar() {
+func renderPBar(count int) {
 	fmt.Print("\x1B7")       // Save the cursor position
 	fmt.Print("\x1B[2K")     // Erase the entire line
 	fmt.Print("\x1B[0J")     // Erase from cursor to end of screen
@@ -101,35 +100,27 @@ func main() {
 	sigwinch := make(chan os.Signal, 1) // Set signal handler
 	defer close(sigwinch)
 	signal.Notify(sigwinch, syscall.SIGWINCH)
-	go func() {
-		for {
-			if _, ok := <-sigwinch; !ok {
-				return
-			}
-
-			err := updateWSize()
-			if err != nil {
-				panic(err) // The window size could not be updated
-			}
-		}
-	}()
 
 	sigterm := make(chan os.Signal, 1)
 	defer close(sigterm)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
 		for {
-			if _, ok := <-sigterm; !ok {
-				return
+			select {
+			case <-sigwinch:
+				if err := updateWSize(); err != nil {
+					panic(err) // The window size could not be updated
+				}
+			case <-sigterm:
+				cleanUp() // Restore reserved bottom line
+				os.Exit(0)
 			}
-
-			cleanUp() // Restore reserved bottom line
-			os.Exit(0)
 		}
 	}()
 
-	for count = 1; count <= total; count++ {
-		renderPBar()
+	for count := 1; count <= total; count++ {
+		renderPBar(count)
 		time.Sleep(time.Second)
 		fmt.Println(count) // Action to be performed after 1 second
 	}
