@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -25,11 +24,11 @@ type pBar struct {
 	once       sync.Once      // Close the signal channel only once
 }
 
-type winsize struct {
-	Row    uint16
-	Col    uint16
-	Xpixel uint16
-	Ypixel uint16
+type winSize struct {
+	Row    uint16 // row
+	Col    uint16 // column
+	Xpixel uint16 // X pixel
+	Ypixel uint16 // Y pixel
 }
 
 // init do the task we want to do before doing all other things
@@ -40,7 +39,7 @@ func init() {}
 // 	- initialize SignalHandler()
 // 	- update pBar.Total for new number of iterations to sum 100%
 // After progressBar() is finished:
-//	- do a cleanUp()
+//	- do a CleanUp()
 func NewPBar() *pBar {
 	pb := &pBar{
 		Total:      100,
@@ -56,7 +55,7 @@ func NewPBar() *pBar {
 	signal.Notify(pb.Sigwinch, syscall.SIGWINCH)               // Register SIGWINCH signal
 	signal.Notify(pb.Sigterm, syscall.SIGINT, syscall.SIGTERM) // Register SIGINT and SIGTERM signal
 
-	pb.updateWSize()
+	pb.UpdateWSize()
 
 	return pb
 }
@@ -73,13 +72,13 @@ func (pb *pBar) CleanUp() {
 	pb.once.Do(func() { close(pb.Sigterm) })  // Close the signal channel politely
 }
 
-// updateWSize update the window size
-func (pb *pBar) updateWSize() error {
+// UpdateWSize update the window size
+func (pb *pBar) UpdateWSize() error {
 	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
 
-	ws := &winsize{}
+	ws := &winSize{}
 	ret, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdin), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
-	if int(ret) < 0 {
+	if int(ret) != -1 {
 		panic(err)
 	}
 
@@ -104,6 +103,24 @@ func (pb *pBar) updateWSize() error {
 	return nil
 }
 
+// SignalHandler handle the signals, like SIGWINCH and SIGTERM
+func (pb *pBar) SignalHandler() {
+	go func() {
+		for {
+			select {
+			case <-pb.Sigwinch:
+				if err := pb.UpdateWSize(); err != nil {
+					panic(err) // The window size could not be updated
+				}
+			case <-pb.Sigterm:
+				fmt.Printf("\nCaught SIGTERM, exiting...\n") // Print the message for SIGTERM
+				pb.CleanUp()                                 // Restore reserved bottom line
+				os.Exit(0)                                   // Exit gracefully
+			}
+		}
+	}()
+}
+
 // RenderPBar render the progress bar. Receives the current iteration count
 func (pb *pBar) RenderPBar(count int) {
 	fmt.Print("\x1B7")       // Save the cursor position
@@ -112,7 +129,7 @@ func (pb *pBar) RenderPBar(count int) {
 	fmt.Print("\x1B[?47h")   // Save screen
 	fmt.Print("\x1B[1J")     // Erase from cursor to beginning of screen
 	fmt.Print("\x1B[?47l")   // Restore screen
-	defer fmt.Print("\x1B8") // Restore the cursor position
+	defer fmt.Print("\x1B8") // Restore the cursor position util new size is calculated
 
 	barWidth := int(math.Abs(float64(pb.Wscol - pb.Header)))               // Calculate the bar width
 	barDone := int(float64(barWidth) * float64(count) / float64(pb.Total)) // Calculate the bar done length
@@ -130,36 +147,4 @@ func (pb *pBar) RenderPBar(count int) {
 	default:
 		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", count*100/pb.Total, bar)
 	}
-}
-
-// SignalHandler handle the signals, like SIGWINCH and SIGTERM
-func (pb *pBar) SignalHandler() {
-	go func() {
-		for {
-			select {
-			case <-pb.Sigwinch:
-				if err := pb.updateWSize(); err != nil {
-					panic(err) // The window size could not be updated
-				}
-			case <-pb.Sigterm:
-				fmt.Printf("\nCaught SIGTERM, exiting...\n") // Print the message for SIGTERM
-				pb.CleanUp()                                 // Restore reserved bottom line
-				os.Exit(0)                                   // Exit gracefully
-			}
-		}
-	}()
-}
-
-// main do the task we want to do
-func main() {
-	pb := NewPBar()    // Create a new progress bar
-	pb.SignalHandler() // Handle the signals
-
-	for count := 1; count <= pb.Total; count++ {
-		pb.RenderPBar(count)    // Render the progress bar
-		time.Sleep(time.Second) // Sleep 1 second
-		fmt.Println(count)      // Action to be performed after 1 second
-	}
-
-	pb.CleanUp() // Restore reserved bottom line
 }
