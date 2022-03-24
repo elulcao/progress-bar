@@ -20,9 +20,9 @@ func TestRenderPBar(t *testing.T) {
 
 	for idx, test := range tests {
 		test.pBar.SignalHandler() // Handle the signals
-		test.pBar.Total = idx + 1
+		test.pBar.Total = uint16(idx + 1)
 
-		for count := 0; count <= test.pBar.Total; count++ {
+		for count := 0; uint16(count) <= test.pBar.Total; count++ {
 			assert.NotPanics(t, func() { test.pBar.RenderPBar(count) }, test.testName)
 		}
 

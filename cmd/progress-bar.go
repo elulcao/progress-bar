@@ -13,10 +13,10 @@ import (
 
 // pBar is the progress bar model
 type pBar struct {
-	Total      int            // Total number of iterations to sum 100%
-	Header     int            // Header length, to be used to calculate the bar width "Progress: [100%] []"
-	Wscol      int            // Window width
-	Wsrow      int            // Window height
+	Total      uint16         // Total number of iterations to sum 100%
+	Header     uint16         // Header length, to be used to calculate the bar width "Progress: [100%] []"
+	Wscol      uint16         // Window width
+	Wsrow      uint16         // Window height
 	DoneStr    string         // Progress bar done string
 	OngoingStr string         // Progress bar ongoing string
 	Sigwinch   chan os.Signal // Signal handler: SIGWINCH
@@ -78,12 +78,12 @@ func (pb *pBar) UpdateWSize() error {
 
 	ws := &winSize{}
 	ret, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdin), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
-	if int(ret) != -1 {
+	if int(ret) == -1 {
 		panic(err)
 	}
 
-	pb.Wscol = int(ws.Col)
-	pb.Wsrow = int(ws.Row)
+	pb.Wscol = ws.Col
+	pb.Wsrow = ws.Row
 
 	switch {
 	case pb.Wscol >= 0 && pb.Wscol <= 9:
@@ -141,10 +141,10 @@ func (pb *pBar) RenderPBar(count int) {
 
 	switch {
 	case pb.Wscol >= 0 && pb.Wscol <= 9:
-		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", count*100/pb.Total)
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", uint16(count)*100/pb.Total)
 	case pb.Wscol >= 10 && pb.Wscol <= 20:
-		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", count*100/pb.Total, bar)
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)
 	default:
-		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", count*100/pb.Total, bar)
+		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)
 	}
 }
