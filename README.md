@@ -44,7 +44,7 @@ be updated by another routine in your code.
 
 ```go
  for count := 1; count <= pBar.Total; count++ {
-    pBar.renderPBar()
+    pBar.renderPBar(count)
     time.Sleep(time.Second)    // sleep for 1 second
     fmt.Println(count)         // Update here to your needs
  }
