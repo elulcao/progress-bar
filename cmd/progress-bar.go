@@ -77,9 +77,12 @@ func (pb *pBar) UpdateWSize() error {
 	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
 
 	ws := &winSize{}
-	ret, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdin), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
-	if int(ret) == -1 {
-		panic(err)
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(syscall.Stdin),
+		uintptr(syscall.TIOCGWINSZ),
+		uintptr(unsafe.Pointer(ws))); err != 0 {
+		panic(err) // The window size could not be updated
 	}
 
 	pb.Wscol = ws.Col

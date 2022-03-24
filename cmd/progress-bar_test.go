@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,13 +16,21 @@ func TestRenderPBar(t *testing.T) {
 	}{
 		{
 			testName: "Test Render Progress Bar",
-			pBar:     NewPBar(),
+			pBar: &pBar{ // Since no TTY is available, we can't test the output nor the window change
+				Total:      uint16(rand.Intn(100)),
+				Header:     uint16(rand.Intn(100)),
+				Wscol:      uint16(rand.Intn(100)),
+				Wsrow:      uint16(rand.Intn(100)),
+				DoneStr:    "#",
+				OngoingStr: ".",
+				Sigwinch:   make(chan os.Signal, 1),
+				Sigterm:    make(chan os.Signal, 1),
+			},
 		},
 	}
 
-	for idx, test := range tests {
+	for _, test := range tests {
 		test.pBar.SignalHandler() // Handle the signals
-		test.pBar.Total = uint16(idx + 1)
 
 		for count := 0; uint16(count) <= test.pBar.Total; count++ {
 			assert.NotPanics(t, func() { test.pBar.RenderPBar(count) }, test.testName)
