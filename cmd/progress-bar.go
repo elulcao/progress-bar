@@ -42,7 +42,7 @@ func init() {}
 //	- do a CleanUp()
 func NewPBar() *PBar {
 	pb := &PBar{
-		Total:      100,
+		Total:      0,
 		Header:     0,
 		Wscol:      0,
 		Wsrow:      0,

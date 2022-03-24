@@ -10,7 +10,7 @@ import (
 func main() {
 	pb := cmd.NewPBar()
 	pb.SignalHandler()
-	pb.Total = 100
+	pb.Total = uint16(100)
 
 	for i := 1; uint16(i) <= pb.Total; i++ {
 		pb.RenderPBar(i)
