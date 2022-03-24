@@ -38,6 +38,7 @@ func init() {}
 // NewPBar create a new progress bar
 // After NewPBar() is called:
 // 	- initialize SignalHandler()
+// 	- update pBar.Total for new number of iterations to sum 100%
 // After progressBar() is finished:
 //	- do a cleanUp()
 func NewPBar() *pBar {
