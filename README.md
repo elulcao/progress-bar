@@ -50,9 +50,20 @@ be updated by another routine in your code.
  }
 ```
 
+The `main.go` file can be used to test the progress bar. It is not used in the real world, but it
+can be used as a reference.
+
+```go
+go run main.go
+```
+
 ## Notes
 
 The `progress-bar` has to handler, `syscall.SIGWINCH` and `syscall.SIGTERM`, the first one is used
 to detect the window size change and the second one is used to detect the program termination.
 These handlers can be removed if not needed, your driver code should be able to handle the
 interruptions.
+
+`progress-bar_test.go` is used to test the progress bar but the most basic usabillity since the test
+is executed without a `TTY`. Due to this, the re-size of the window is not validated for now. It's
+highly recommended to verify the `progress_bar.go` via `go run main.go` to ensure the correct output.
