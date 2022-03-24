@@ -28,7 +28,7 @@ the program output that consumes the `progress-bar`.
 Characters used by default are "#" and "." but can be changed by updating the struct:
 
 ```go
-type pBar struct {
+type PBar struct {
     //...
     DoneStr    = "#"
     OngoingStr = "."

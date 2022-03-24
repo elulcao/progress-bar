@@ -11,8 +11,8 @@ import (
 	"unsafe"
 )
 
-// pBar is the progress bar model
-type pBar struct {
+// PBar is the progress bar model
+type PBar struct {
 	Total      uint16         // Total number of iterations to sum 100%
 	Header     uint16         // Header length, to be used to calculate the bar width "Progress: [100%] []"
 	Wscol      uint16         // Window width
@@ -40,8 +40,8 @@ func init() {}
 // 	- update pBar.Total for new number of iterations to sum 100%
 // After progressBar() is finished:
 //	- do a CleanUp()
-func NewPBar() *pBar {
-	pb := &pBar{
+func NewPBar() *PBar {
+	pb := &PBar{
 		Total:      100,
 		Header:     0,
 		Wscol:      0,
@@ -61,7 +61,7 @@ func NewPBar() *pBar {
 }
 
 // CleanUp restore reserved bottom line and restore cursor position
-func (pb *pBar) CleanUp() {
+func (pb *PBar) CleanUp() {
 	fmt.Print("\x1B7")                 // Save the cursor position
 	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
 	fmt.Printf("\x1B[%d;0f", pb.Wsrow) // Move the cursor to the bottom line
@@ -73,7 +73,7 @@ func (pb *pBar) CleanUp() {
 }
 
 // UpdateWSize update the window size
-func (pb *pBar) UpdateWSize() error {
+func (pb *PBar) UpdateWSize() error {
 	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
 
 	ws := &winSize{}
@@ -89,12 +89,12 @@ func (pb *pBar) UpdateWSize() error {
 	pb.Wsrow = ws.Row
 
 	switch {
-	case pb.Wscol >= 0 && pb.Wscol <= 9:
-		pb.Header = 6 // len("[100%]") is the minimum header length
-	case pb.Wscol >= 10 && pb.Wscol <= 20:
-		pb.Header = 9 // len("[100%] []") is the midium header length
+	case pb.Wscol >= uint16(0) && pb.Wscol <= uint16(9):
+		pb.Header = uint16(6) // len("[100%]") is the minimum header length
+	case pb.Wscol >= uint16(10) && pb.Wscol <= uint16(20):
+		pb.Header = uint16(9) // len("[100%] []") is the midium header length
 	default:
-		pb.Header = 19 // len("Progress: [100%] []") is the maximum header length
+		pb.Header = uint16(19) // len("Progress: [100%] []") is the maximum header length
 	}
 
 	fmt.Print("\x1BD")                   // Return carriage
@@ -107,7 +107,7 @@ func (pb *pBar) UpdateWSize() error {
 }
 
 // SignalHandler handle the signals, like SIGWINCH and SIGTERM
-func (pb *pBar) SignalHandler() {
+func (pb *PBar) SignalHandler() {
 	go func() {
 		for {
 			select {
@@ -125,7 +125,7 @@ func (pb *pBar) SignalHandler() {
 }
 
 // RenderPBar render the progress bar. Receives the current iteration count
-func (pb *pBar) RenderPBar(count int) {
+func (pb *PBar) RenderPBar(count int) {
 	fmt.Print("\x1B7")       // Save the cursor position
 	fmt.Print("\x1B[2K")     // Erase the entire line
 	fmt.Print("\x1B[0J")     // Erase from cursor to end of screen
@@ -143,9 +143,9 @@ func (pb *pBar) RenderPBar(count int) {
 	fmt.Printf("\x1B[%d;%dH", pb.Wsrow, 0) // move cursor to row #, col #
 
 	switch {
-	case pb.Wscol >= 0 && pb.Wscol <= 9:
+	case pb.Wscol >= uint16(0) && pb.Wscol <= uint16(9):
 		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", uint16(count)*100/pb.Total)
-	case pb.Wscol >= 10 && pb.Wscol <= 20:
+	case pb.Wscol >= uint16(10) && pb.Wscol <= uint16(20):
 		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)
 	default:
 		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)

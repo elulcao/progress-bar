@@ -12,11 +12,11 @@ import (
 func TestRenderPBar(t *testing.T) {
 	tests := []struct {
 		testName string
-		pBar     *pBar
+		pBar     *PBar
 	}{
 		{
 			testName: "Test Render Progress Bar",
-			pBar: &pBar{ // Since no TTY is available, we can't test the output nor the window change
+			pBar: &PBar{ // Since no TTY is available, we can't test the output nor the window change
 				Total:      uint16(rand.Intn(100)),
 				Header:     uint16(rand.Intn(100)),
 				Wscol:      uint16(rand.Intn(100)),
