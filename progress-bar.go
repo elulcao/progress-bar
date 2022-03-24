@@ -6,69 +6,105 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
+	"unsafe"
 )
 
-var (
-	total      = 100 // Total number of iterations to sum 100%
-	header     = 0   // Header length, to be used to calculate the bar width "Progress: [100%] []"
-	wscol      = 0   // Window width
-	wsrow      = 0   // Window height
-	doneStr    = "#" // Progress bar done string
-	ongoingStr = "." // Progress bar ongoing string
-)
-
-// init do the task we want to do before doing all other things
-func init() {
-	if err := updateWSize(); err != nil {
-		panic(err)
-	}
+// pBar is the progress bar model
+type pBar struct {
+	Total      int            // Total number of iterations to sum 100%
+	Header     int            // Header length, to be used to calculate the bar width "Progress: [100%] []"
+	Wscol      int            // Window width
+	Wsrow      int            // Window height
+	DoneStr    string         // Progress bar done string
+	OngoingStr string         // Progress bar ongoing string
+	Sigwinch   chan os.Signal // Signal handler: SIGWINCH
+	Sigterm    chan os.Signal // Signal handler: SIGTERM
+	once       sync.Once      // Close the signal channel only once
 }
 
-// Restore reserved bottom line
-func cleanUp() {
-	fmt.Print("\x1B7")              // Save the cursor position
-	fmt.Printf("\x1B[0;%dr", wsrow) // Drop margin reservation
-	fmt.Printf("\x1B[%d;0f", wsrow) // Move the cursor to the bottom line
-	fmt.Print("\x1B[0K")            // Erase the entire line
-	fmt.Print("\x1B8")              // Restore the cursor position
+type winsize struct {
+	Row    uint16
+	Col    uint16
+	Xpixel uint16
+	Ypixel uint16
+}
+
+// init do the task we want to do before doing all other things
+func init() {}
+
+// NewPBar create a new progress bar
+// After NewPBar() is called:
+// 	- initialize SignalHandler()
+// After progressBar() is finished:
+//	- do a cleanUp()
+func NewPBar() *pBar {
+	pb := &pBar{
+		Total:      100,
+		Header:     0,
+		Wscol:      0,
+		Wsrow:      0,
+		DoneStr:    "#",
+		OngoingStr: ".",
+		Sigwinch:   make(chan os.Signal, 1),
+		Sigterm:    make(chan os.Signal, 1),
+	}
+
+	signal.Notify(pb.Sigwinch, syscall.SIGWINCH)               // Register SIGWINCH signal
+	signal.Notify(pb.Sigterm, syscall.SIGINT, syscall.SIGTERM) // Register SIGINT and SIGTERM signal
+
+	pb.updateWSize()
+
+	return pb
+}
+
+// CleanUp restore reserved bottom line and restore cursor position
+func (pb *pBar) CleanUp() {
+	fmt.Print("\x1B7")                 // Save the cursor position
+	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
+	fmt.Printf("\x1B[%d;0f", pb.Wsrow) // Move the cursor to the bottom line
+	fmt.Print("\x1B[0K")               // Erase the entire line
+	fmt.Print("\x1B8")                 // Restore the cursor position
+
+	pb.once.Do(func() { close(pb.Sigwinch) }) // Close the signal channel politely
+	pb.once.Do(func() { close(pb.Sigterm) })  // Close the signal channel politely
 }
 
 // updateWSize update the window size
-func updateWSize() error {
-	fmt.Printf("\x1B[0;%dr", wsrow) // Drop margin reservation
+func (pb *pBar) updateWSize() error {
+	fmt.Printf("\x1B[0;%dr", pb.Wsrow) // Drop margin reservation
 
-	ws, err := unix.IoctlGetWinsize(syscall.Stdout, unix.TIOCGWINSZ)
-	if err != nil {
-		return err
+	ws := &winsize{}
+	ret, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdin), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
+	if int(ret) < 0 {
+		panic(err)
 	}
 
-	wscol = int(ws.Col)
-	wsrow = int(ws.Row)
+	pb.Wscol = int(ws.Col)
+	pb.Wsrow = int(ws.Row)
 
 	switch {
-	case wscol >= 0 && wscol <= 9:
-		header = 6 // len("[100%]")
-	case wscol >= 10 && wscol <= 20:
-		header = 9 // len("[100%] []")
+	case pb.Wscol >= 0 && pb.Wscol <= 9:
+		pb.Header = 6 // len("[100%]") is the minimum header length
+	case pb.Wscol >= 10 && pb.Wscol <= 20:
+		pb.Header = 9 // len("[100%] []") is the midium header length
 	default:
-		header = 19 // len("Progress: [100%] []")
+		pb.Header = 19 // len("Progress: [100%] []") is the maximum header length
 	}
 
-	fmt.Print("\x1BD")                // Return carriage
-	fmt.Print("\x1B7")                // Save the cursor position
-	fmt.Printf("\x1B[0;%dr", wsrow-1) // Reserve the bottom line
-	fmt.Print("\x1B8")                // Restore the cursor position
-	fmt.Print("\x1B[1A")              // Moves cursor up # lines
+	fmt.Print("\x1BD")                   // Return carriage
+	fmt.Print("\x1B7")                   // Save the cursor position
+	fmt.Printf("\x1B[0;%dr", pb.Wsrow-1) // Reserve the bottom line
+	fmt.Print("\x1B8")                   // Restore the cursor position
+	fmt.Print("\x1B[1A")                 // Moves cursor up # lines
 
 	return nil
 }
 
-// renderPBar render the progress bar
-func renderPBar(count int) {
+// RenderPBar render the progress bar. Receives the current iteration count
+func (pb *pBar) RenderPBar(count int) {
 	fmt.Print("\x1B7")       // Save the cursor position
 	fmt.Print("\x1B[2K")     // Erase the entire line
 	fmt.Print("\x1B[0J")     // Erase from cursor to end of screen
@@ -77,53 +113,52 @@ func renderPBar(count int) {
 	fmt.Print("\x1B[?47l")   // Restore screen
 	defer fmt.Print("\x1B8") // Restore the cursor position
 
-	barWidth := int(math.Abs(float64(wscol - header)))                  // Calculate the bar width
-	barDone := int(float64(barWidth) * float64(count) / float64(total)) // Calculate the bar done length
-	done := strings.Repeat(doneStr, barDone)                            // Fill the bar with done string
-	todo := strings.Repeat(ongoingStr, barWidth-barDone)                // Fill the bar with todo string
-	bar := fmt.Sprintf("[%s%s]", done, todo)                            // Combine the done and todo string
+	barWidth := int(math.Abs(float64(pb.Wscol - pb.Header)))               // Calculate the bar width
+	barDone := int(float64(barWidth) * float64(count) / float64(pb.Total)) // Calculate the bar done length
+	done := strings.Repeat(pb.DoneStr, barDone)                            // Fill the bar with done string
+	todo := strings.Repeat(pb.OngoingStr, barWidth-barDone)                // Fill the bar with todo string
+	bar := fmt.Sprintf("[%s%s]", done, todo)                               // Combine the done and todo string
 
-	fmt.Printf("\x1B[%d;%dH", wsrow, 0) // move cursor to row #, col #
+	fmt.Printf("\x1B[%d;%dH", pb.Wsrow, 0) // move cursor to row #, col #
 
 	switch {
-	case wscol >= 0 && wscol <= 9:
-		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", count*100/total)
-	case wscol >= 10 && wscol <= 20:
-		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", count*100/total, bar)
+	case pb.Wscol >= 0 && pb.Wscol <= 9:
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m]", count*100/pb.Total)
+	case pb.Wscol >= 10 && pb.Wscol <= 20:
+		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", count*100/pb.Total, bar)
 	default:
-		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", count*100/total, bar)
+		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", count*100/pb.Total, bar)
 	}
+}
+
+// SignalHandler handle the signals, like SIGWINCH and SIGTERM
+func (pb *pBar) SignalHandler() {
+	go func() {
+		for {
+			select {
+			case <-pb.Sigwinch:
+				if err := pb.updateWSize(); err != nil {
+					panic(err) // The window size could not be updated
+				}
+			case <-pb.Sigterm:
+				fmt.Printf("\nCaught SIGTERM, exiting...\n") // Print the message for SIGTERM
+				pb.CleanUp()                                 // Restore reserved bottom line
+				os.Exit(0)                                   // Exit gracefully
+			}
+		}
+	}()
 }
 
 // main do the task we want to do
 func main() {
-	sigwinch := make(chan os.Signal, 1) // Set signal handler
-	defer close(sigwinch)
-	signal.Notify(sigwinch, syscall.SIGWINCH)
+	pb := NewPBar()    // Create a new progress bar
+	pb.SignalHandler() // Handle the signals
 
-	sigterm := make(chan os.Signal, 1)
-	defer close(sigterm)
-	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		for {
-			select {
-			case <-sigwinch:
-				if err := updateWSize(); err != nil {
-					panic(err) // The window size could not be updated
-				}
-			case <-sigterm:
-				cleanUp() // Restore reserved bottom line
-				os.Exit(0)
-			}
-		}
-	}()
-
-	for count := 1; count <= total; count++ {
-		renderPBar(count)
-		time.Sleep(time.Second)
-		fmt.Println(count) // Action to be performed after 1 second
+	for count := 1; count <= pb.Total; count++ {
+		pb.RenderPBar(count)    // Render the progress bar
+		time.Sleep(time.Second) // Sleep 1 second
+		fmt.Println(count)      // Action to be performed after 1 second
 	}
 
-	cleanUp() // Restore reserved bottom line
+	pb.CleanUp() // Restore reserved bottom line
 }
