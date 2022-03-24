@@ -25,13 +25,15 @@ window size automatically.
 Last line of the window is preserved to show the progress, the rest of the window is used to show
 the program output that consumes the `progress-bar`.
 
-Characters used by default are "#" and "." but can be changed by updating variables:
+Characters used by default are "#" and "." but can be changed by updating the struct:
 
 ```go
-var (
- doneStr    = "#"
- ongoingStr = "."
-)
+type pBar struct {
+    //...
+    DoneStr    = "#"
+    OngoingStr = "."
+    //...
+}
 ```
 
 ## Usage
@@ -41,10 +43,10 @@ printing numbers from 1 to 100. In a real world scenario, the `count` variable s
 be updated by another routine in your code.
 
 ```go
- for count = 1; count <= total; count++ {
-  renderPBar()
-  time.Sleep(time.Second)
-  fmt.Println(count) // Update here to your needs
+ for count := 1; count <= pBar.Total; count++ {
+    pBar.renderPBar()
+    time.Sleep(time.Second)    // sleep for 1 second
+    fmt.Println(count)         // Update here to your needs
  }
 ```
 
