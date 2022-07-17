@@ -17,14 +17,14 @@ func TestRenderPBar(t *testing.T) {
 		{
 			testName: "Test Render Progress Bar",
 			pBar: &PBar{ // Since no TTY is available, we can't test the output nor the window change
-				Total:      uint16(rand.Intn(100)),
-				Header:     uint16(rand.Intn(100)),
-				Wscol:      uint16(rand.Intn(100)),
-				Wsrow:      uint16(rand.Intn(100)),
-				DoneStr:    "#",
-				OngoingStr: ".",
-				Sigwinch:   make(chan os.Signal, 1),
-				Sigterm:    make(chan os.Signal, 1),
+				Total:       uint16(rand.Intn(100)),
+				header:      uint16(rand.Intn(100)),
+				wscol:       uint16(rand.Intn(100)),
+				wsrow:       uint16(rand.Intn(100)),
+				doneStr:     "#",
+				ongoingStr:  ".",
+				signalWinch: make(chan os.Signal, 1),
+				signalTerm:  make(chan os.Signal, 1),
 			},
 		},
 	}

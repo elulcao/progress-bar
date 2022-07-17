@@ -10,12 +10,12 @@ import (
 func main() {
 	pb := cmd.NewPBar()
 	pb.SignalHandler()
-	pb.Total = uint16(100)
+	pb.Total = uint16(10)
 
 	for i := 1; uint16(i) <= pb.Total; i++ {
 		pb.RenderPBar(i)
-		fmt.Println(i)
-		time.Sleep(1 * time.Second)
+		fmt.Println(i)              // Do something here
+		time.Sleep(1 * time.Second) // Wait 1 second, for demo purpose
 	}
 
 	pb.CleanUp()
