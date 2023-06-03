@@ -11,9 +11,9 @@ jobs:
     name: Build 
     strategy:
       matrix:
-        go: [1.19, 1.20]
+        go: [1.19.9, 1.20.4]
     runs-on: ubuntu-latest
-    container: golang:${{ matrix.go }}-stretch
+    container: golang:${{ matrix.go }}-bullseye
     
     steps:
       - name: Checkout 
