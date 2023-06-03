@@ -36,5 +36,6 @@ jobs:
 
       - name: Build
         run: |
+          git config --global --add safe.directory '*'
           go mod vendor
           go build -v ./...
