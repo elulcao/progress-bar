@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOPATH: /opt/hostedtoolcache/go/
+      GOROOT: /opt/hostedtoolcache/go/ 
       GO111MODULE: "auto"
     steps:
       - uses: actions/checkout@v3
