@@ -35,10 +35,11 @@ type PBar struct {
 
 // NewPBar create a new progress bar
 // After NewPBar() is called:
-// 	- initialize SignalHandler()
-// 	- update pBar.Total for new number of iterations to sum 100%
+//   - initialize SignalHandler()
+//   - update pBar.Total for new number of iterations to sum 100%
+//
 // After progressBar() is finished:
-//	- do a CleanUp()
+//   - do a CleanUp()
 func NewPBar() *PBar {
 	pb := &PBar{
 		Total:       0,
@@ -54,7 +55,7 @@ func NewPBar() *PBar {
 	signal.Notify(pb.signalWinch, syscall.SIGWINCH) // Register SIGWINCH signal
 	signal.Notify(pb.signalTerm, syscall.SIGTERM)   // Register SIGTERM signal
 
-	pb.UpdateWSize()
+	_ = pb.UpdateWSize()
 
 	return pb
 }

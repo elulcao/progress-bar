@@ -4,8 +4,10 @@
 *.dll
 *.so
 *.dylib
-*_bar.linux
-*_bar.darwin
+progress_bar
+
+# vendor
+vendor/
 
 # Test binary, built with `go test -c`
 *.test
