@@ -19,7 +19,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          go install -v github.com/cweill/gotests/gotests@latest
           go install -v honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Show versions
