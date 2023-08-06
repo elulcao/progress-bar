@@ -27,3 +27,6 @@ vendor/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# .vscode
+.vscode/*.log
