@@ -78,16 +78,12 @@ func (pb *PBar) CleanUp() {
 
 // updateWSize update the window size
 func (pb *PBar) UpdateWSize() error {
-	if _, _, err := syscall.Syscall(
-		syscall.SYS_IOCTL,
-		uintptr(syscall.Stdin),
-		uintptr(syscall.TIOCGWINSZ),
-		uintptr(unsafe.Pointer(&pb.winSize))); err != 0 {
-		if err == syscall.ENOTTY || err == syscall.ENODEV {
-			return nil // Not a terminal, running in a pipeline or test
-		} else {
-			panic(err)
-		}
+	isTerminal, err := pb.checkIsTerminal()
+	if err != nil {
+		return fmt.Errorf("could not check if the current process is running in a terminal: %w", err)
+	}
+	if !isTerminal {
+		return nil // Not a terminal, running in a pipeline or test
 	}
 	if pb.Total == uint16(100) {
 		return nil // No need to update the header length
@@ -161,4 +157,21 @@ func (pb *PBar) SignalHandler() {
 			}
 		}
 	}()
+}
+
+// checkIsTerminal check if the current process is running in a terminal
+func (pb *PBar) checkIsTerminal() (isTerminal bool, err error) {
+	if _, _, err := syscall.Syscall(
+		syscall.SYS_IOCTL,
+		uintptr(syscall.Stdin),
+		uintptr(syscall.TIOCGWINSZ),
+		uintptr(unsafe.Pointer(&pb.winSize))); err != 0 {
+		if err == syscall.ENOTTY || err == syscall.ENODEV {
+			return false, nil // Not a terminal, running in a pipeline or test
+		} else {
+			return false, err // Other error
+		}
+	}
+
+	return true, nil
 }
