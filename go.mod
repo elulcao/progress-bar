@@ -1,6 +1,6 @@
 module github.com/elulcao/progress-bar
 
-go 1.22
+go 1.23.3
 
 require github.com/stretchr/testify v1.7.1
 
