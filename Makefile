@@ -20,11 +20,15 @@ go-fmt:
 	@echo "Running go fmt"
 	go fmt ./...
 
+go-update:
+	@echo "Running go get"
+	go get -u -t ./... 
+
 build: clean
-	env GO111MODULE=auto GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -o "$(APP_NAME)"
+	env GOOS=$(GOOS) GOARCH=$(GOARCH) go build -v -o "$(APP_NAME)"
 
 install: build
 	install -m 0755 "$(APP_NAME)" "$(GOPATH)/bin/"
 
 clean:
-	find . -type f -name "$(APP_NAME).*" -exec rm -rf {} \;
+	find . -type f -name "$(APP_NAME).*" -exec rm -r {} \;
