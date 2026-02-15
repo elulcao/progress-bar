@@ -31,6 +31,8 @@ type PBar struct {
 		Xpixel uint16 // X pixel
 		Ypixel uint16 // Y pixel
 	}
+	CustomMsg    string // Custom message
+	CustomPrompt string // Custom prompt
 }
 
 // NewPBar create a new progress bar
@@ -50,6 +52,7 @@ func NewPBar() *PBar {
 		ongoingStr:  ".",
 		signalWinch: make(chan os.Signal, 1),
 		signalTerm:  make(chan os.Signal, 1),
+		CustomMsg:   "",
 	}
 
 	signal.Notify(pb.signalWinch, syscall.SIGWINCH) // Register SIGWINCH signal
@@ -124,6 +127,15 @@ func (pb *PBar) RenderPBar(count int) {
 	todo := strings.Repeat(pb.ongoingStr, barWidth-barDone)                // Fill the bar with todo string
 	bar := fmt.Sprintf("[%s%s]", done, todo)                               // Combine the done and todo string
 
+	if pb.CustomMsg != "" {
+		bar = pb.CustomMsg
+	}
+
+	prompt := "Progress: "
+	if pb.CustomPrompt != "" {
+		prompt = fmt.Sprintf(pb.CustomPrompt)
+	}
+
 	fmt.Printf("\x1B[%d;%dH", pb.wsrow, 0) // move cursor to row #, col #
 	fmt.Print("\x1B[2K")                    // Erase the progress bar line before redrawing
 
@@ -133,7 +145,7 @@ func (pb *PBar) RenderPBar(count int) {
 	case pb.wscol >= uint16(10) && pb.wscol <= uint16(20):
 		fmt.Printf("[\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)
 	default:
-		fmt.Printf("Progress: [\x1B[33m%3d%%\x1B[0m] %s", uint16(count)*100/pb.Total, bar)
+		fmt.Printf("%s[\x1B[33m%3d%%\x1B[0m] %s", prompt, uint16(count)*100/pb.Total, bar)
 	}
 }
 
